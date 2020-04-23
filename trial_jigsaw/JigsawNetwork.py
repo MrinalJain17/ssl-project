@@ -7,12 +7,10 @@ Created on Wed Sep 13 15:57:01 2017
 import torch
 import torch.nn as nn
 from torch import cat
-import torch.nn.init as init
 
 import sys
 
 sys.path.append("Utils")
-from Layers import LRN
 
 
 class Network(nn.Module):
@@ -25,14 +23,14 @@ class Network(nn.Module):
         )
         self.conv.add_module("relu1_s1", nn.ReLU(inplace=True))
         self.conv.add_module("pool1_s1", nn.MaxPool2d(kernel_size=3, stride=2))
-        self.conv.add_module("lrn1_s1", LRN(local_size=5, alpha=0.0001, beta=0.75))
+        self.conv.add_module("lrn1_s1", nn.LocalResponseNorm(size=5))
 
         self.conv.add_module(
             "conv2_s1", nn.Conv2d(96, 256, kernel_size=5, padding=2, groups=2)
         )
         self.conv.add_module("relu2_s1", nn.ReLU(inplace=True))
         self.conv.add_module("pool2_s1", nn.MaxPool2d(kernel_size=3, stride=2))
-        self.conv.add_module("lrn2_s1", LRN(local_size=5, alpha=0.0001, beta=0.75))
+        self.conv.add_module("lrn2_s1", nn.LocalResponseNorm(size=5))
 
         self.conv.add_module("conv3_s1", nn.Conv2d(256, 384, kernel_size=3, padding=1))
         self.conv.add_module("relu3_s1", nn.ReLU(inplace=True))
