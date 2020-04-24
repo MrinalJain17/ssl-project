@@ -6,8 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=10GB
-#SBATCH --gres=gpu:p40:4
-#SBATCH --time=3:00:00
+#SBATCH --gres=gpu:v100:1
+#SBATCH --time=2:00:00
 
 module purge
 module load cudnn/10.1v7.6.5.32
