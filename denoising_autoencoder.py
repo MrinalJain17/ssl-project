@@ -108,7 +108,7 @@ class DenoisingAutoencoder(pl.LightningModule):
 
         # Keeping aside 6 scenes for validation
         # np.random.shuffle(unlabeled_scene_index)
-        self._train_unlabeled_scene_index = unlabeled_scene_index[:1]
+        self._train_unlabeled_scene_index = unlabeled_scene_index[:100]
         self._valid_unlabeled_scene_index = unlabeled_scene_index[100:]
 
         self.unlabeled_trainset = CorruptedUnlabeledDataset(
