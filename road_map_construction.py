@@ -41,9 +41,10 @@ class RoadMapNetwork(pl.LightningModule):
     def forward(self, x):
         stacked = self._stack_features(x)
         stacked = self.classifier(stacked)
-        stacked = F.interpolate(stacked, size=800, mode="bilinear", align_corners=False)
+        # stacked = F.interpolate(stacked, size=800, mode="bilinear", align_corners=False)
+        stacked = F.interpolate(stacked, size=100, mode="bilinear", align_corners=False)
 
-        return torch.squeeze(stacked, 1)  # Output size -> (None, 800, 800)
+        return torch.squeeze(stacked, 1)  # Output size -> (None, 100, 100)
 
     def _stack_features(self, x):
         temp = []
@@ -56,7 +57,11 @@ class RoadMapNetwork(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         sample, _, road_image = batch
         sample = torch.stack(sample)
-        road_image = torch.stack(road_image).float()
+        road_image = torch.stack(road_image).unsqueeze(1).float()
+        road_image = F.interpolate(
+            road_image, size=100, mode="bilinear", align_corners=False
+        )
+        road_image = road_image.squeeze(1)
         predicted_road_image = self.forward(sample)
         loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
 
@@ -66,7 +71,11 @@ class RoadMapNetwork(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         sample, _, road_image = batch
         sample = torch.stack(sample)
-        road_image = torch.stack(road_image).float()
+        road_image = torch.stack(road_image).unsqueeze(1).float()
+        road_image = F.interpolate(
+            road_image, size=100, mode="bilinear", align_corners=False
+        )
+        road_image = road_image.squeeze(1)
         predicted_road_image = self.forward(sample)
         loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
 
