@@ -36,15 +36,16 @@ class RoadMapNetwork(pl.LightningModule):
             FEATURE_EXTRACTOR_PATH
         )
         self.feature_extractor.freeze()
-        self.classifier = nn.Conv2d(192, 1, 3, 1, bias=False)
+        self.classifier = nn.Sequential(
+            nn.Conv2d(192, 64, 3, 1), nn.ReLU(), nn.Conv2d(64, 1, 3, 1)
+        )
 
     def forward(self, x):
         stacked = self._stack_features(x)
+        stacked = F.interpolate(stacked, size=804, mode="bilinear", align_corners=False)
         stacked = self.classifier(stacked)
-        # stacked = F.interpolate(stacked, size=800, mode="bilinear", align_corners=False)
-        stacked = F.interpolate(stacked, size=100, mode="bilinear", align_corners=False)
 
-        return torch.squeeze(stacked, 1)  # Output size -> (None, 100, 100)
+        return torch.squeeze(stacked, 1)  # Output size -> (None, 800, 800)
 
     def _stack_features(self, x):
         temp = []
@@ -57,11 +58,7 @@ class RoadMapNetwork(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         sample, _, road_image = batch
         sample = torch.stack(sample)
-        road_image = torch.stack(road_image).unsqueeze(1).float()
-        road_image = F.interpolate(
-            road_image, size=100, mode="bilinear", align_corners=False
-        )
-        road_image = road_image.squeeze(1)
+        road_image = torch.stack(road_image).float()
         predicted_road_image = self.forward(sample)
         loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
 
@@ -71,11 +68,7 @@ class RoadMapNetwork(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         sample, _, road_image = batch
         sample = torch.stack(sample)
-        road_image = torch.stack(road_image).unsqueeze(1).float()
-        road_image = F.interpolate(
-            road_image, size=100, mode="bilinear", align_corners=False
-        )
-        road_image = road_image.squeeze(1)
+        road_image = torch.stack(road_image).float()
         predicted_road_image = self.forward(sample)
         loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
 
@@ -157,6 +150,7 @@ def main(args):
     model = RoadMapNetwork(hparams=args)
     trainer = Trainer(gpus=1, max_epochs=args.EPOCHS, logger=logger)
     trainer.fit(model)
+    trainer.save_checkpoint("saved_model/road_map.ckpt")
 
 
 if __name__ == "__main__":
@@ -165,8 +159,8 @@ if __name__ == "__main__":
     # parametrize the network
     parser.add_argument("--BATCH_SIZE", type=int, default=8)
     parser.add_argument("--EPOCHS", type=int, default=50)
-    parser.add_argument("--LEARNING_RATE", type=float, default=2.1e-8)
-    parser.add_argument("--L2_PENALTY", type=float, default=1e-4)
+    parser.add_argument("--LEARNING_RATE", type=float, default=1e-4)
+    parser.add_argument("--L2_PENALTY", type=float, default=1e-5)
 
     args = parser.parse_args()
 
