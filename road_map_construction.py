@@ -154,7 +154,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     # parametrize the network
-    parser.add_argument("--BATCH_SIZE", type=int, default=32)
+    parser.add_argument("--BATCH_SIZE", type=int, default=8)
     parser.add_argument("--EPOCHS", type=int, default=50)
     parser.add_argument("--LEARNING_RATE", type=float, default=2.1e-8)
     parser.add_argument("--L2_PENALTY", type=float, default=1e-4)
