@@ -17,6 +17,8 @@ random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
 
+IMAGE_FOLDER = "../data"
+
 
 class DenoisingAutoencoder(pl.LightningModule):
     """A denoising autoencoder module
@@ -30,7 +32,6 @@ class DenoisingAutoencoder(pl.LightningModule):
         1. BATCH_SIZE
         2. LEARNING_RATE
         3. L2_PENALTY
-
     """
 
     def __init__(self, hparams):
@@ -74,10 +75,12 @@ class DenoisingAutoencoder(pl.LightningModule):
         input_, target_ = batch
         reconstruction = self.decoder(self.forward(input_))
         loss = F.mse_loss(reconstruction, target_)
+
         return {"val_loss": loss}
 
     def validation_epoch_end(self, outputs):
         val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
+
         logs = {"val_loss": val_loss_mean}
         return {"val_loss": val_loss_mean, "log": logs}
 
@@ -89,9 +92,13 @@ class DenoisingAutoencoder(pl.LightningModule):
         )
 
     def prepare_data(self):
-        # All the images are saved in image_folder
-        image_folder = "../data"
+        # The first 106 scenes are unlabeled
+        unlabeled_scene_index = np.arange(106)
 
+        # Keeping aside 6 scenes for validation
+        # np.random.shuffle(unlabeled_scene_index)
+        self._train_unlabeled_scene_index = unlabeled_scene_index[:100]
+        self._valid_unlabeled_scene_index = unlabeled_scene_index[100:]
         self._static_transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize((224, 224)),
@@ -103,23 +110,15 @@ class DenoisingAutoencoder(pl.LightningModule):
         )
         self._noise = AddGaussianNoise(mean=0.0, std=0.25)
 
-        # The first 106 scenes are unlabeled
-        unlabeled_scene_index = np.arange(106)
-
-        # Keeping aside 6 scenes for validation
-        # np.random.shuffle(unlabeled_scene_index)
-        self._train_unlabeled_scene_index = unlabeled_scene_index[:100]
-        self._valid_unlabeled_scene_index = unlabeled_scene_index[100:]
-
         self.unlabeled_trainset = CorruptedUnlabeledDataset(
-            image_folder=image_folder,
+            image_folder=IMAGE_FOLDER,
             scene_index=self._train_unlabeled_scene_index,
             transform=self._static_transform,
             noise=self._noise,
         )
 
         self.unlabeled_validset = CorruptedUnlabeledDataset(
-            image_folder=image_folder,
+            image_folder=IMAGE_FOLDER,
             scene_index=self._valid_unlabeled_scene_index,
             transform=self._static_transform,
             noise=self._noise,
@@ -137,7 +136,7 @@ class DenoisingAutoencoder(pl.LightningModule):
         return torch.utils.data.DataLoader(
             self.unlabeled_validset,
             batch_size=self.hparams.BATCH_SIZE,
-            shuffle=True,
+            shuffle=False,
             num_workers=4,
         )
 
