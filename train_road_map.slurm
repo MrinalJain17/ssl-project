@@ -6,8 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=20GB
-#SBATCH --gres=gpu:k80:1
-#SBATCH --time=8:00:00
+#SBATCH --gres=gpu:p100:1
+#SBATCH --time=12:00:00
 
 module purge
 module load cudnn/10.1v7.6.5.32
@@ -22,4 +22,4 @@ fi
 cd $(pwd)
 conda activate base
 
-python road_map_construction.py
+python road_map_construction.py --EPOCHS 25

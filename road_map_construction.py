@@ -150,7 +150,7 @@ def main(args):
     model = RoadMapNetwork(hparams=args)
     trainer = Trainer(gpus=1, max_epochs=args.EPOCHS, logger=logger)
     trainer.fit(model)
-    trainer.save_checkpoint("saved_model/road_map.ckpt")
+    trainer.save_checkpoint("saved_models/road_map.ckpt")
 
 
 if __name__ == "__main__":
