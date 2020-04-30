@@ -22,4 +22,4 @@ fi
 cd $(pwd)
 conda activate base
 
-python road_map_construction.py --EPOCHS 25
+python road_map_construction.py

@@ -13,7 +13,8 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from data_helper import LabeledDataset
 from denoising_autoencoder import DenoisingAutoencoder
-from helper import collate_fn
+from helper import collate_fn, compute_ts_road_map
+from unet import UNet
 
 random.seed(0)
 np.random.seed(0)
@@ -25,7 +26,19 @@ ANNOTATION_CSV = "../data/annotation.csv"
 
 
 class RoadMapNetwork(pl.LightningModule):
-    """TODO
+    """Module for construction the binary road image
+
+    Parameters
+    ----------
+
+    hparams : argparse.Namespace
+        A namespace containing the required hyperparameters. In particular, the
+        code expects `hparams` to have the following keys:
+        1. NUM_LAYERS
+        2. BATCH_SIZE
+        3. LEARNING_RATE
+        4. L2_PENALTY
+        5. EPOCHS
     """
 
     def __init__(self, hparams):
@@ -34,16 +47,14 @@ class RoadMapNetwork(pl.LightningModule):
 
         self.feature_extractor = DenoisingAutoencoder.load_from_checkpoint(
             FEATURE_EXTRACTOR_PATH
-        )
+        )  # Output size -> (None, 192, 13, 13)
         self.feature_extractor.freeze()
-        self.classifier = nn.Sequential(
-            nn.Conv2d(192, 64, 3, 1), nn.ReLU(), nn.Conv2d(64, 1, 3, 1)
-        )
+        self.classifier = UNet(num_layers=self.hparams.NUM_LAYERS)
 
     def forward(self, x):
         stacked = self._stack_features(x)
-        stacked = F.interpolate(stacked, size=804, mode="bilinear", align_corners=False)
         stacked = self.classifier(stacked)
+        stacked = F.interpolate(stacked, size=800, mode="bilinear", align_corners=False)
 
         return torch.squeeze(stacked, 1)  # Output size -> (None, 800, 800)
 
@@ -72,12 +83,25 @@ class RoadMapNetwork(pl.LightningModule):
         predicted_road_image = self.forward(sample)
         loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
 
-        return {"val_loss": loss}
+        medians = (
+            (
+                predicted_road_image.contiguous()
+                .view(predicted_road_image.size(0), -1)
+                .median(-1)[0]
+            )
+            .unsqueeze(1)
+            .unsqueeze(1)
+        )  # Hacky way to get mean of each image in the batch in the right shape
+        predicted_road_image = predicted_road_image > medians
+        ts = compute_ts_road_map(predicted_road_image, road_image)
+
+        return {"val_loss": loss, "threat_score": ts}
 
     def validation_epoch_end(self, outputs):
         val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
+        threat_score_mean = torch.stack([x["threat_score"] for x in outputs]).mean()
 
-        logs = {"val_loss": val_loss_mean}
+        logs = {"val_loss": val_loss_mean, "threat_score": threat_score_mean}
         return {"val_loss": val_loss_mean, "log": logs}
 
     def configure_optimizers(self):
@@ -157,10 +181,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     # parametrize the network
+    parser.add_argument("--NUM_LAYERS", type=int, default=3)
     parser.add_argument("--BATCH_SIZE", type=int, default=8)
     parser.add_argument("--EPOCHS", type=int, default=50)
-    parser.add_argument("--LEARNING_RATE", type=float, default=1e-4)
-    parser.add_argument("--L2_PENALTY", type=float, default=1e-5)
+    parser.add_argument("--LEARNING_RATE", type=float, default=8.3e-3)
+    parser.add_argument("--L2_PENALTY", type=float, default=1e-4)
 
     args = parser.parse_args()
 

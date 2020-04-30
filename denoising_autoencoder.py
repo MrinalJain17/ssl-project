@@ -23,6 +23,9 @@ IMAGE_FOLDER = "../data"
 class DenoisingAutoencoder(pl.LightningModule):
     """A denoising autoencoder module
 
+    The trained autoencoder is later used as a feature extractor for the
+    labeled data.
+
     Parameters
     ----------
 
@@ -32,6 +35,7 @@ class DenoisingAutoencoder(pl.LightningModule):
         1. BATCH_SIZE
         2. LEARNING_RATE
         3. L2_PENALTY
+        4. EPOCHS
     """
 
     def __init__(self, hparams):
