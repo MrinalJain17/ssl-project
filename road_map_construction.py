@@ -44,12 +44,12 @@ class RoadMapNetwork(pl.LightningModule):
     def __init__(self, hparams):
         super(RoadMapNetwork, self).__init__()
         self.hparams = hparams
-
         self.feature_extractor = DenoisingAutoencoder.load_from_checkpoint(
             FEATURE_EXTRACTOR_PATH
         )  # Output size -> (None, 192, 13, 13)
         self.feature_extractor.freeze()
-        self.classifier = UNet(num_layers=self.hparams.NUM_LAYERS)
+
+        self.classifier = UNet(num_layers=self.hparams.NUM_LAYERS, features_start=256)
 
     def forward(self, x):
         stacked = self._stack_features(x)
@@ -105,11 +105,17 @@ class RoadMapNetwork(pl.LightningModule):
         return {"val_loss": val_loss_mean, "log": logs}
 
     def configure_optimizers(self):
-        return torch.optim.Adam(
+        optimizer = torch.optim.SGD(
             self.parameters(),
             lr=self.hparams.LEARNING_RATE,
             weight_decay=self.hparams.L2_PENALTY,
+            momentum=0.9
         )
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            factor=0.5
+        )
+        return [optimizer], [scheduler]
 
     def prepare_data(self):
         # The scenes from 106 - 133 are labeled
@@ -181,11 +187,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     # parametrize the network
-    parser.add_argument("--NUM_LAYERS", type=int, default=3)
-    parser.add_argument("--BATCH_SIZE", type=int, default=8)
+    parser.add_argument("--NUM_LAYERS", type=int, default=2)
+    parser.add_argument("--BATCH_SIZE", type=int, default=32)
     parser.add_argument("--EPOCHS", type=int, default=50)
-    parser.add_argument("--LEARNING_RATE", type=float, default=8.3e-3)
-    parser.add_argument("--L2_PENALTY", type=float, default=1e-4)
+    parser.add_argument("--LEARNING_RATE", type=float, default=0.01)
+    parser.add_argument("--L2_PENALTY", type=float, default=5e-4)
 
     args = parser.parse_args()
 

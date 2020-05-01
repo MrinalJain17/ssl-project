@@ -37,6 +37,7 @@ def draw_box(ax, corners, color):
 
 
 def compute_ts_road_map(road_map1, road_map2):
+    """Computes the mean threat score of road images for an entire batch"""
     tp = (road_map1 * road_map2).sum(axis=(1, 2))
     ts = tp * 1.0 / (road_map1.sum(axis=(1, 2)) + road_map2.sum(axis=(1, 2)) - tp)
     return ts.mean()
