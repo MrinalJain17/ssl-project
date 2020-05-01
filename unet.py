@@ -17,16 +17,21 @@ class UNet(nn.Module):
     """
 
     def __init__(
-        self, num_classes: int = 1, num_layers: int = 4, features_start: int = 64,
+        self,
+        num_classes: int = 1,
+        num_layers: int = 4,
+        features_start: int = 64,
+        dropout=False,
     ):
         super().__init__()
         self.num_layers = num_layers
+        self.dropout = dropout
 
         layers = [DoubleConv(192, features_start)]
 
         feats = features_start
         for _ in range(num_layers - 1):
-            layers.append(Down(feats, feats * 2))
+            layers.append(Down(feats, feats * 2, self.dropout))
             feats *= 2
 
         for _ in range(num_layers - 1):
@@ -62,7 +67,7 @@ class DoubleConv(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x):
@@ -74,13 +79,13 @@ class Down(nn.Module):
     Combination of MaxPool2d and DoubleConv in series
     """
 
-    def __init__(self, in_ch: int, out_ch: int):
+    def __init__(self, in_ch: int, out_ch: int, dropout=False):
         super().__init__()
         self.net = nn.Sequential(
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            DoubleConv(in_ch, out_ch),
-            nn.Dropout2d(0.2)  # Custom
+            nn.MaxPool2d(kernel_size=2, stride=2), DoubleConv(in_ch, out_ch),
         )
+        if dropout:
+            self.net.add_module("dropout", nn.Dropout2d(dropout))
 
     def forward(self, x):
         return self.net(x)

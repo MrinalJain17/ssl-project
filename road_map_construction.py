@@ -35,10 +35,12 @@ class RoadMapNetwork(pl.LightningModule):
         A namespace containing the required hyperparameters. In particular, the
         code expects `hparams` to have the following keys:
         1. NUM_LAYERS
-        2. BATCH_SIZE
-        3. LEARNING_RATE
-        4. L2_PENALTY
-        5. EPOCHS
+        2. FEATURES_START
+        3. DROPOUT
+        4. BATCH_SIZE
+        5. LEARNING_RATE
+        6. L2_PENALTY
+        7. EPOCHS
     """
 
     def __init__(self, hparams):
@@ -49,14 +51,24 @@ class RoadMapNetwork(pl.LightningModule):
         )  # Output size -> (None, 192, 13, 13)
         self.feature_extractor.freeze()
 
-        self.classifier = UNet(num_layers=self.hparams.NUM_LAYERS, features_start=256)
+        dropout = False if self.hparams.DROPOUT == 0 else self.hparams.DROPOUT
+
+        self.classifier = UNet(
+            num_layers=self.hparams.NUM_LAYERS,
+            features_start=self.hparams.FEATURES_START,
+            dropout=dropout,
+        )
 
     def forward(self, x):
         stacked = self._stack_features(x)
         stacked = self.classifier(stacked)
         stacked = F.interpolate(stacked, size=800, mode="bilinear", align_corners=False)
+        stacked = torch.squeeze(stacked, 1)
+        if self.hparams.USE_MSE:
+            # BCE internally applies sigmoid, MSE does not
+            stacked = torch.sigmoid(stacked)
 
-        return torch.squeeze(stacked, 1)  # Output size -> (None, 800, 800)
+        return stacked  # Output size -> (None, 800, 800)
 
     def _stack_features(self, x):
         temp = []
@@ -71,7 +83,10 @@ class RoadMapNetwork(pl.LightningModule):
         sample = torch.stack(sample)
         road_image = torch.stack(road_image).float()
         predicted_road_image = self.forward(sample)
-        loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
+        if self.hparams.USE_MSE:
+            loss = F.mse_loss(predicted_road_image, road_image)
+        else:
+            loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
 
         logs = {"loss": loss}
         return {"loss": loss, "log": logs}
@@ -81,7 +96,10 @@ class RoadMapNetwork(pl.LightningModule):
         sample = torch.stack(sample)
         road_image = torch.stack(road_image).float()
         predicted_road_image = self.forward(sample)
-        loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
+        if self.hparams.USE_MSE:
+            loss = F.mse_loss(predicted_road_image, road_image)
+        else:
+            loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
 
         medians = (
             (
@@ -109,12 +127,9 @@ class RoadMapNetwork(pl.LightningModule):
             self.parameters(),
             lr=self.hparams.LEARNING_RATE,
             weight_decay=self.hparams.L2_PENALTY,
-            momentum=0.9
+            momentum=0.9,
         )
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            factor=0.5
-        )
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5)
         return [optimizer], [scheduler]
 
     def prepare_data(self):
@@ -180,7 +195,7 @@ def main(args):
     model = RoadMapNetwork(hparams=args)
     trainer = Trainer(gpus=1, max_epochs=args.EPOCHS, logger=logger)
     trainer.fit(model)
-    trainer.save_checkpoint("saved_models/road_map.ckpt")
+    trainer.save_checkpoint(f"saved_models/road_map_{args.VERSION}.ckpt")
 
 
 if __name__ == "__main__":
@@ -188,10 +203,14 @@ if __name__ == "__main__":
 
     # parametrize the network
     parser.add_argument("--NUM_LAYERS", type=int, default=2)
+    parser.add_argument("--FEATURES_START", type=int, default=64)
+    parser.add_argument("--DROPOUT", type=float, default=0.0)
     parser.add_argument("--BATCH_SIZE", type=int, default=32)
     parser.add_argument("--EPOCHS", type=int, default=50)
+    parser.add_argument("--USE_MSE", action="store_true", default=False)
     parser.add_argument("--LEARNING_RATE", type=float, default=0.01)
     parser.add_argument("--L2_PENALTY", type=float, default=5e-4)
+    parser.add_argument("--VERSION", type=int, default=0)
 
     args = parser.parse_args()
 
