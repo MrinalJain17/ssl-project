@@ -34,10 +34,3 @@ def draw_box(ax, corners, color):
     # Add 400, since the center of the image is at pixel (400, 400)
     # The negative sign is because the y axis is reversed for matplotlib
     ax.plot(point_squence.T[0] * 10 + 400, -point_squence.T[1] * 10 + 400, color=color)
-
-
-def compute_ts_road_map(road_map1, road_map2):
-    """Computes the mean threat score of road images for an entire batch"""
-    tp = (road_map1 * road_map2).sum(axis=(1, 2))
-    ts = tp * 1.0 / (road_map1.sum(axis=(1, 2)) + road_map2.sum(axis=(1, 2)) - tp)
-    return ts.mean()

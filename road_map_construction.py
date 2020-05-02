@@ -13,8 +13,9 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from data_helper import LabeledDataset
 from denoising_autoencoder import DenoisingAutoencoder
-from helper import collate_fn, compute_ts_road_map
+from helper import collate_fn
 from unet import UNet
+from utils import LOSS, compute_ts_road_map
 
 random.seed(0)
 np.random.seed(0)
@@ -41,17 +42,23 @@ class RoadMapNetwork(pl.LightningModule):
         5. LEARNING_RATE
         6. L2_PENALTY
         7. EPOCHS
+        8. LOSS
     """
 
     def __init__(self, hparams):
         super(RoadMapNetwork, self).__init__()
         self.hparams = hparams
+
+        dropout = False if self.hparams.DROPOUT == 0 else self.hparams.DROPOUT
+        self.apply_sigmoid = True
+        if self.hparams.LOSS == "bce":
+            self.apply_sigmoid = False
+        self.loss_fn = LOSS[self.hparams.LOSS]
+
         self.feature_extractor = DenoisingAutoencoder.load_from_checkpoint(
             FEATURE_EXTRACTOR_PATH
         )  # Output size -> (None, 192, 13, 13)
         self.feature_extractor.freeze()
-
-        dropout = False if self.hparams.DROPOUT == 0 else self.hparams.DROPOUT
 
         self.classifier = UNet(
             num_layers=self.hparams.NUM_LAYERS,
@@ -64,8 +71,7 @@ class RoadMapNetwork(pl.LightningModule):
         stacked = self.classifier(stacked)
         stacked = F.interpolate(stacked, size=800, mode="bilinear", align_corners=False)
         stacked = torch.squeeze(stacked, 1)
-        if self.hparams.USE_MSE:
-            # BCE internally applies sigmoid, MSE does not
+        if self.apply_sigmoid:
             stacked = torch.sigmoid(stacked)
 
         return stacked  # Output size -> (None, 800, 800)
@@ -83,10 +89,7 @@ class RoadMapNetwork(pl.LightningModule):
         sample = torch.stack(sample)
         road_image = torch.stack(road_image).float()
         predicted_road_image = self.forward(sample)
-        if self.hparams.USE_MSE:
-            loss = F.mse_loss(predicted_road_image, road_image)
-        else:
-            loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
+        loss = self.loss_fn(predicted_road_image, road_image)
 
         logs = {"loss": loss}
         return {"loss": loss, "log": logs}
@@ -96,10 +99,7 @@ class RoadMapNetwork(pl.LightningModule):
         sample = torch.stack(sample)
         road_image = torch.stack(road_image).float()
         predicted_road_image = self.forward(sample)
-        if self.hparams.USE_MSE:
-            loss = F.mse_loss(predicted_road_image, road_image)
-        else:
-            loss = F.binary_cross_entropy_with_logits(predicted_road_image, road_image)
+        loss = self.loss_fn(predicted_road_image, road_image)
 
         medians = (
             (
@@ -109,7 +109,7 @@ class RoadMapNetwork(pl.LightningModule):
             )
             .unsqueeze(1)
             .unsqueeze(1)
-        )  # Hacky way to get mean of each image in the batch in the right shape
+        )  # Hacky way to get median of each image in the batch in the right shape
         predicted_road_image = predicted_road_image > medians
         ts = compute_ts_road_map(predicted_road_image, road_image)
 
@@ -136,10 +136,10 @@ class RoadMapNetwork(pl.LightningModule):
         # The scenes from 106 - 133 are labeled
         labeled_scene_index = np.arange(106, 134)
 
-        # Keeping aside 8 scenes for validation
+        # Keeping aside last 8 scenes for validation
         # np.random.shuffle(labeled_scene_index)
-        self._train_labeled_scene_index = labeled_scene_index[8:]
-        self._valid_labeled_scene_index = labeled_scene_index[:8]
+        self._train_labeled_scene_index = labeled_scene_index[:-8]
+        self._valid_labeled_scene_index = labeled_scene_index[-8:]
         self._static_transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize((224, 224)),
@@ -207,7 +207,12 @@ if __name__ == "__main__":
     parser.add_argument("--DROPOUT", type=float, default=0.0)
     parser.add_argument("--BATCH_SIZE", type=int, default=32)
     parser.add_argument("--EPOCHS", type=int, default=50)
-    parser.add_argument("--USE_MSE", action="store_true", default=False)
+    parser.add_argument(
+        "--LOSS",
+        type=str,
+        default="bce",
+        choices=["bce", "mse", "mae", "psnr_mse", "psnr_mae"],
+    )
     parser.add_argument("--LEARNING_RATE", type=float, default=0.01)
     parser.add_argument("--L2_PENALTY", type=float, default=5e-4)
     parser.add_argument("--VERSION", type=int, default=0)
