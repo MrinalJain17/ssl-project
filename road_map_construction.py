@@ -51,7 +51,7 @@ class RoadMapNetwork(pl.LightningModule):
 
         dropout = False if self.hparams.DROPOUT == 0 else self.hparams.DROPOUT
         self.apply_sigmoid = True
-        if self.hparams.LOSS == "bce":
+        if self.hparams.LOSS in ["bce", "weighted_bce"]:
             self.apply_sigmoid = False
         self.loss_fn = LOSS[self.hparams.LOSS]
 
@@ -211,7 +211,15 @@ if __name__ == "__main__":
         "--LOSS",
         type=str,
         default="bce",
-        choices=["bce", "mse", "mae", "psnr_mse", "psnr_mae"],
+        choices=[
+            "bce",
+            "weighted_bce",
+            "mse",
+            "mae",
+            "bce+mse",
+            "psnr_mse",
+            "psnr_mae",
+        ],
     )
     parser.add_argument("--LEARNING_RATE", type=float, default=0.01)
     parser.add_argument("--L2_PENALTY", type=float, default=5e-4)

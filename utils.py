@@ -14,6 +14,18 @@ def psnr_mae(input, target):
     return psnr
 
 
+def bce_mse(input, target):
+    bce = F.binary_cross_entropy(input, target)
+    mse = F.mse_loss(input, target)
+    return bce + mse
+
+
+def weighted_bce(input, target):
+    weight = torch.tensor([0.5]).type_as(input)
+    bce = F.binary_cross_entropy_with_logits(input, target, pos_weight=weight)
+    return bce
+
+
 def compute_ts_road_map(road_map1, road_map2):
     """Computes the mean threat score of road images for an entire batch"""
     tp = (road_map1 * road_map2).sum(axis=(1, 2))
@@ -23,8 +35,10 @@ def compute_ts_road_map(road_map1, road_map2):
 
 LOSS = {
     "bce": F.binary_cross_entropy_with_logits,
+    "weighted_bce": weighted_bce,
     "mse": F.mse_loss,
     "mae": F.l1_loss,
+    "bce+mse": bce_mse,
     "psnr_mse": psnr_mse,
     "psnr_mae": psnr_mae,
 }
