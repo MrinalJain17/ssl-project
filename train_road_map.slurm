@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=20GB
-#SBATCH --gres=gpu:p100:1
+#SBATCH --gres=gpu:1
 #SBATCH --time=3:00:00
 
 module purge
@@ -47,5 +47,7 @@ conda activate base
 # python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS psnr_mae --VERSION 18
 # python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 256 --DROPOUT 0.4 --LOSS psnr_mae --VERSION 19
 
-python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS bce+mse --VERSION 20
-python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS weighted_bce --VERSION 21
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS bce+mse --VERSION 20
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS weighted_bce --VERSION 21
+
+python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS weighted_bce --VERSION 22

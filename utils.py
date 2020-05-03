@@ -21,7 +21,7 @@ def bce_mse(input, target):
 
 
 def weighted_bce(input, target):
-    weight = torch.tensor([0.5]).type_as(input)
+    weight = torch.tensor([2.0]).type_as(input)
     bce = F.binary_cross_entropy_with_logits(input, target, pos_weight=weight)
     return bce
 
