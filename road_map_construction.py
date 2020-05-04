@@ -88,11 +88,6 @@ class RoadMapNetwork(pl.LightningModule):
         sample, _, road_image = batch
         sample = torch.stack(sample)
         road_image = torch.stack(road_image).float()
-
-        # The feature extractor training resumes after 10 epochs
-        if self.current_epoch == 10:
-            self.feature_extractor.unfreeze()
-
         predicted_road_image = self.forward(sample)
         if self.hparams.LOSS == "dice_loss":
             predicted_road_image = predicted_road_image.unsqueeze(1)
@@ -143,10 +138,17 @@ class RoadMapNetwork(pl.LightningModule):
         # The scenes from 106 - 133 are labeled
         labeled_scene_index = np.arange(106, 134)
 
+        # Actually used during training and validation
         # Keeping aside last 8 scenes for validation
-        # np.random.shuffle(labeled_scene_index)
-        self._train_labeled_scene_index = labeled_scene_index[:-8]
-        self._valid_labeled_scene_index = labeled_scene_index[-8:]
+        # self._train_labeled_scene_index = labeled_scene_index[:-8]
+        # self._valid_labeled_scene_index = labeled_scene_index[-8:]
+
+        # Modification for submission (training on entire data)
+        # Not removing the validation scenes to avoid changing other parts of
+        # the code. Though validation here does not make sense.
+        self._train_labeled_scene_index = labeled_scene_index[:]
+        self._valid_labeled_scene_index = labeled_scene_index[120:134]
+
         self._static_transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize((224, 224)),
@@ -209,15 +211,15 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     # parametrize the network
-    parser.add_argument("--NUM_LAYERS", type=int, default=2)
-    parser.add_argument("--FEATURES_START", type=int, default=64)
-    parser.add_argument("--DROPOUT", type=float, default=0.0)
+    parser.add_argument("--NUM_LAYERS", type=int, default=3)
+    parser.add_argument("--FEATURES_START", type=int, default=128)
+    parser.add_argument("--DROPOUT", type=float, default=0.4)
     parser.add_argument("--BATCH_SIZE", type=int, default=32)
     parser.add_argument("--EPOCHS", type=int, default=50)
     parser.add_argument(
         "--LOSS",
         type=str,
-        default="bce",
+        default="dice_loss",
         choices=[
             "bce",
             "weighted_bce",
@@ -229,7 +231,7 @@ if __name__ == "__main__":
             "psnr_mae",
         ],
     )
-    parser.add_argument("--LEARNING_RATE", type=float, default=0.01)
+    parser.add_argument("--LEARNING_RATE", type=float, default=0.1)
     parser.add_argument("--L2_PENALTY", type=float, default=5e-4)
     parser.add_argument("--VERSION", type=int, default=0)
 
