@@ -88,6 +88,11 @@ class RoadMapNetwork(pl.LightningModule):
         sample, _, road_image = batch
         sample = torch.stack(sample)
         road_image = torch.stack(road_image).float()
+
+        # The feature extractor training resumes after 10 epochs
+        if self.current_epoch == 10:
+            self.feature_extractor.unfreeze()
+
         predicted_road_image = self.forward(sample)
         if self.hparams.LOSS == "dice_loss":
             predicted_road_image = predicted_road_image.unsqueeze(1)
