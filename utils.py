@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 
+from dice_loss import DiceLoss
+
 
 def psnr_mse(input, target):
     mse = F.mse_loss(input, target)
@@ -26,6 +28,12 @@ def weighted_bce(input, target):
     return bce
 
 
+def dice_loss(input, target):
+    dice = DiceLoss()
+    loss = dice(input, target)
+    return loss
+
+
 def compute_ts_road_map(road_map1, road_map2):
     """Computes the mean threat score of road images for an entire batch"""
     tp = (road_map1 * road_map2).sum(axis=(1, 2))
@@ -39,6 +47,7 @@ LOSS = {
     "mse": F.mse_loss,
     "mae": F.l1_loss,
     "bce+mse": bce_mse,
+    "dice_loss": dice_loss,
     "psnr_mse": psnr_mse,
     "psnr_mae": psnr_mae,
 }

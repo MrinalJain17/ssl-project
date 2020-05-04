@@ -89,6 +89,8 @@ class RoadMapNetwork(pl.LightningModule):
         sample = torch.stack(sample)
         road_image = torch.stack(road_image).float()
         predicted_road_image = self.forward(sample)
+        if self.hparams.LOSS == "dice_loss":
+            predicted_road_image = predicted_road_image.unsqueeze(1)
         loss = self.loss_fn(predicted_road_image, road_image)
 
         logs = {"loss": loss}
@@ -217,6 +219,7 @@ if __name__ == "__main__":
             "mse",
             "mae",
             "bce+mse",
+            "dice_loss",
             "psnr_mse",
             "psnr_mae",
         ],

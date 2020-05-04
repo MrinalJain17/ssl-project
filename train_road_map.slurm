@@ -50,4 +50,11 @@ conda activate base
 # python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS bce+mse --VERSION 20
 # python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS weighted_bce --VERSION 21
 
-python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS weighted_bce --VERSION 22
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS weighted_bce --VERSION 22
+
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS dice_loss --VERSION 23
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.25 --LOSS dice_loss --LEARNING_RATE 0.1 --VERSION 24
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 128 --DROPOUT 0.40 --LOSS dice_loss --LEARNING_RATE 0.1 --VERSION 25
+# python road_map_construction.py --NUM_LAYERS 2 --FEATURES_START 256 --DROPOUT 0.40 --LOSS dice_loss --LEARNING_RATE 0.1 --VERSION 26
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 256 --DROPOUT 0.50 --LOSS dice_loss --LEARNING_RATE 0.1 --VERSION 27
+# python road_map_construction.py --NUM_LAYERS 3 --FEATURES_START 256 --DROPOUT 0.50 --LOSS dice_loss --LEARNING_RATE 0.1 --EPOCHS 100 --VERSION 28
