@@ -147,7 +147,7 @@ class RoadMapNetwork(pl.LightningModule):
         # Not removing the validation scenes to avoid changing other parts of
         # the code. Though validation here does not make sense.
         self._train_labeled_scene_index = labeled_scene_index[:]
-        self._valid_labeled_scene_index = labeled_scene_index[120:134]
+        self._valid_labeled_scene_index = labeled_scene_index[-14:]
 
         self._static_transform = torchvision.transforms.Compose(
             [
