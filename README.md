@@ -14,3 +14,9 @@
 3. The directory `saved_models` contains the trained model checkpoints.
 
 4. The code for object detection is inside the directory `object_detection`.
+
+### Requirements
+
+1. PyTorch
+2. Torchvision
+3. [PyTorch Lightning](https://github.com/PyTorchLightning/pytorch-lightning) - for simplifying the training, validation and testing interface.
