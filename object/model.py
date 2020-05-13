@@ -102,13 +102,6 @@ class VGGBase(nn.Module):
         return conv4_3_feats, conv7_feats
 
     def load_pretrained_layers(self):
-        """
-        As in the paper, we use a VGG-16 pretrained on the ImageNet task as the base network.
-        There's one available in PyTorch, see https://pytorch.org/docs/stable/torchvision/models.html#torchvision.models.vgg16
-        We copy these parameters into our network. It's straightforward for conv1 to conv5.
-        However, the original VGG-16 does not contain the conv6 and con7 layers.
-        Therefore, we convert fc6 and fc7 into convolutional layers, and subsample by decimation. See 'decimate' in utils.py.
-        """
         # Current state of base
         state_dict = self.state_dict()
         param_names = list(state_dict.keys())
@@ -324,7 +317,7 @@ class PredictionConvolutions(nn.Module):
 
 class SSD300(nn.Module):
     """
-    The SSD300 network - encapsulates the base VGG network, auxiliary, and prediction convolutions.
+    The SSD300 network - encapsulates the base network, auxiliary, and prediction convolutions.
     """
 
     def __init__(self, n_classes):
